@@ -52,11 +52,34 @@ jobs:
     steps:
       - name: Derive package version
         run: echo "PACKAGE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Resolve PyPI sdist URL
+        id: pypi-sdist
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          import urllib.request
+
+          version = os.environ["PACKAGE_VERSION"]
+          url = f"https://pypi.org/pypi/openclaw-tool-audit/{version}/json"
+          with urllib.request.urlopen(url, timeout=30) as response:
+              payload = json.load(response)
+
+          for file_info in payload["urls"]:
+              if file_info["packagetype"] == "sdist":
+                  print(f"url={file_info['url']}")
+                  break
+          else:
+              raise SystemExit(f"No sdist found for openclaw-tool-audit {version}")
+          PY
       - name: Bump Homebrew formula
         uses: mislav/bump-homebrew-formula-action@v4
         with:
           formula-name: openclaw-tool-audit
           homebrew-tap: pfrederiksen/homebrew-tap
-          download-url: https://files.pythonhosted.org/packages/source/o/openclaw-tool-audit/openclaw_tool_audit-${{ env.PACKAGE_VERSION }}.tar.gz
+          download-url: ${{ steps.pypi-sdist.outputs.url }}
         env:
           COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
