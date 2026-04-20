@@ -42,7 +42,7 @@ jobs:
         if: ${{ steps.pypi-token.outputs.present == 'false' }}
         uses: pypa/gh-action-pypi-publish@release/v1
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/*
 
