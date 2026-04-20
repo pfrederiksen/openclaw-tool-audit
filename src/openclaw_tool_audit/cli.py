@@ -87,16 +87,20 @@ def build_parser() -> argparse.ArgumentParser:
 def _default_paths() -> tuple[list[str], list[str]]:
     cwd = Path.cwd()
     home = Path.home()
+    agent_session_dirs = sorted(home.glob(".openclaw/agents/*/sessions"))
     return (
         [
             str(cwd / ".openclaw" / "agents"),
             str(cwd / "agents"),
+            str(home / ".openclaw" / "openclaw.json"),
             str(home / ".openclaw" / "agents"),
         ],
         [
             str(cwd / ".openclaw" / "sessions"),
             str(cwd / "sessions"),
             str(home / ".openclaw" / "sessions"),
+            str(home / ".openclaw" / "transcripts"),
+            *(str(path) for path in agent_session_dirs),
         ],
     )
 

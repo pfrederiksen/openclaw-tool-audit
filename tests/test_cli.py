@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+import openclaw_tool_audit.cli as cli
 from openclaw_tool_audit.cli import main
 
 
@@ -38,3 +39,15 @@ def test_cli_version(capsys) -> None:
     captured = capsys.readouterr()
     assert exc_info.value.code == 0
     assert captured.out.startswith("openclaw-tool-audit ")
+
+
+def test_default_paths_include_documented_agent_session_dirs(tmp_path: Path, monkeypatch) -> None:
+    agent_sessions = tmp_path / ".openclaw" / "agents" / "agent-a" / "sessions"
+    agent_sessions.mkdir(parents=True)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    _, session_paths = cli._default_paths()
+
+    assert str(tmp_path / ".openclaw" / "sessions") in session_paths
+    assert str(tmp_path / ".openclaw" / "transcripts") in session_paths
+    assert str(agent_sessions) in session_paths

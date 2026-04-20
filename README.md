@@ -38,6 +38,8 @@ And these observed session locations:
 - `./.openclaw/sessions`
 - `./sessions`
 - `~/.openclaw/sessions`
+- `~/.openclaw/transcripts`
+- `~/.openclaw/agents/<agentId>/sessions`
 
 Use `--config PATH` and `--sessions PATH` to point at specific files or directories. Both flags may be repeated.
 
@@ -64,6 +66,7 @@ Structured JSON scanning recognizes common tool-call shapes:
 
 - `{"type": "tool_call", "name": "read_file"}`
 - `{"type": "tool_use", "tool": "web"}`
+- `{"type": "tool", "tool": {"name": "shell"}}`
 - `{"type": "input_tool_call", "name": "read"}`
 - `{"type": "tool_use", "toolName": "edit"}`
 - `{"recipient_name": "functions.exec_command"}`

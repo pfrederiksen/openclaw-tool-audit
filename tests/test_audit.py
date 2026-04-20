@@ -143,6 +143,7 @@ def test_sanitized_openclaw_session_jsonl_counts_embedded_tool_calls(tmp_path: P
                     "read",
                     "edit",
                     "exec",
+                    "shell",
                     "web_fetch",
                     "functions.exec_command",
                 ],
@@ -191,6 +192,15 @@ def test_sanitized_openclaw_session_jsonl_counts_embedded_tool_calls(tmp_path: P
                 json.dumps(
                     {
                         "agent": "main",
+                        "agentId": "main",
+                        "type": "tool",
+                        "tool": {"name": "shell"},
+                        "input": "run a command",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "agent": "main",
                         "event": {
                             "type": "assistant_message",
                             "content": (
@@ -207,10 +217,11 @@ def test_sanitized_openclaw_session_jsonl_counts_embedded_tool_calls(tmp_path: P
     report = run_audit(AuditOptions((config_dir,), (sessions_dir,)))
     summary = report.agents[0]
 
-    assert report.observation_count == 6
+    assert report.observation_count == 7
     assert summary.observed_counts["read"] == 1
     assert summary.observed_counts["edit"] == 1
     assert summary.observed_counts["exec"] == 1
+    assert summary.observed_counts["shell"] == 1
     assert summary.observed_counts["web_fetch"] == 2
     assert summary.observed_counts["functions.exec_command"] == 1
     assert report.jobs[0].name == "nightly-audit"

@@ -296,6 +296,10 @@ def _tool_names_from_event(event: Mapping[str, Any]) -> list[str]:
         tools.append(event["recipientName"])
     if "tool" in event and isinstance(event["tool"], str):
         tools.append(event["tool"])
+    if "tool" in event and isinstance(event["tool"], Mapping):
+        tool_name = _first_string(event["tool"], ["name", "tool_name", "toolName"])
+        if tool_name:
+            tools.append(tool_name)
     if "tool_name" in event and isinstance(event["tool_name"], str):
         tools.append(event["tool_name"])
     if "toolName" in event and isinstance(event["toolName"], str):
@@ -325,6 +329,7 @@ def _tool_names_from_event(event: Mapping[str, Any]) -> list[str]:
 
 def _looks_like_tool_invocation(event_type: str) -> bool:
     if event_type in {
+        "tool",
         "tool_call",
         "tool-use",
         "tool_use",
@@ -393,12 +398,12 @@ def _find_agent_name(data: Any) -> str | None:
 
 
 def _first_agent_string(data: Mapping[str, Any]) -> str | None:
-    direct = _first_string(data, ["agent", "agent_name", "agent_id"])
+    direct = _first_string(data, ["agent", "agent_name", "agent_id", "agentId"])
     if direct:
         return direct
     agent = data.get("agent")
     if isinstance(agent, Mapping):
-        return _first_string(agent, ["name", "id", "agent_name", "agent_id"])
+        return _first_string(agent, ["name", "id", "agent_name", "agent_id", "agentId"])
     return None
 
 
