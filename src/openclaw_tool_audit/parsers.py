@@ -141,7 +141,16 @@ def _config_from_data(data: Any, path: Path) -> AgentConfig | None:
 
 
 def _find_allowed_tools(data: Any) -> list[str]:
-    keys = {
+    keys = _allowed_tool_keys()
+    values: list[str] = []
+    for key, value in _walk_items(data):
+        if key in keys:
+            values.extend(_coerce_tool_list(value))
+    return values
+
+
+def _allowed_tool_keys() -> set[str]:
+    return {
         "allowed_tools",
         "tools",
         "tool_allowlist",
@@ -149,11 +158,6 @@ def _find_allowed_tools(data: Any) -> list[str]:
         "allowedToolNames",
         "allowed_tools_list",
     }
-    values: list[str] = []
-    for key, value in _walk_items(data):
-        if key in keys:
-            values.extend(_coerce_tool_list(value))
-    return values
 
 
 def _coerce_tool_list(value: Any) -> list[str]:
@@ -168,13 +172,64 @@ def _coerce_tool_list(value: Any) -> list[str]:
                 maybe_name = _first_string(item, ["name", "tool", "id"])
                 if maybe_name:
                     result.append(maybe_name)
+                else:
+                    result.extend(_nested_tool_names(item))
         return result
     if isinstance(value, Mapping):
-        enabled = []
+        enabled: list[str] = []
         for key, item_value in value.items():
-            if item_value is True or item_value in {"allow", "allowed", "enabled"}:
+            if item_value is True:
                 enabled.append(str(key))
+                continue
+            if (
+                isinstance(item_value, str)
+                and item_value.lower() in {"allow", "allowed", "enabled"}
+            ):
+                enabled.append(str(key))
+                continue
+            if isinstance(item_value, Mapping) and _mapping_enables_tool(item_value):
+                enabled.append(str(key))
+                continue
+            nested = _nested_tool_names(item_value)
+            if nested:
+                enabled.append(str(key))
+                enabled.extend(nested)
         return enabled
+    return []
+
+
+def _mapping_enables_tool(value: Mapping[str, Any]) -> bool:
+    for item_value in value.values():
+        if item_value is True:
+            return True
+        if isinstance(item_value, str) and item_value.lower() in {"allow", "allowed", "enabled"}:
+            return True
+    return False
+
+
+def _nested_tool_names(value: Any) -> list[str]:
+    if isinstance(value, Mapping):
+        direct_name = _first_string(value, ["name", "tool", "id"])
+        if direct_name:
+            return [direct_name]
+        nested: list[str] = []
+        for key, item_value in value.items():
+            if key in _allowed_tool_keys():
+                nested.extend(_coerce_tool_list(item_value))
+            elif isinstance(item_value, Mapping):
+                nested.extend(_nested_tool_names(item_value))
+            elif isinstance(item_value, list | tuple | set):
+                for item in item_value:
+                    nested.extend(_nested_tool_names(item))
+        return nested
+    if isinstance(value, list | tuple | set):
+        nested: list[str] = []
+        for item in value:
+            if isinstance(item, str):
+                nested.append(item)
+            elif isinstance(item, Mapping):
+                nested.extend(_nested_tool_names(item))
+        return nested
     return []
 
 

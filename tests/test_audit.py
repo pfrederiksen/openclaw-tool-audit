@@ -89,3 +89,43 @@ def test_missing_config_handling(tmp_path: Path) -> None:
     assert report.missing_config_agents == {"ad-hoc"}
     assert report.agents[0].name == "ad-hoc"
     assert report.agents[0].allowed_tools == set()
+
+
+def test_nested_tool_config_values_do_not_crash(tmp_path: Path) -> None:
+    config_dir = tmp_path / "agents"
+    write(
+        config_dir / "host.json",
+        json.dumps(
+            {
+                "name": "host",
+                "tools": {
+                    "shell": {
+                        "enabled": True,
+                        "commands": ["git status", "pytest"],
+                    },
+                    "web": "allowed",
+                    "bundled": [
+                        {"name": "read_file"},
+                        {"tool": "write_file"},
+                    ],
+                    "profiles": {
+                        "allowed_tools": ["github", {"name": "fetch_url"}],
+                    },
+                },
+            }
+        ),
+    )
+
+    report = run_audit(AuditOptions((config_dir,), (tmp_path / "sessions",)))
+    summary = report.agents[0]
+
+    assert "shell" in summary.allowed_tools
+    assert "web" in summary.allowed_tools
+    assert "bundled" in summary.allowed_tools
+    assert "read_file" in summary.allowed_tools
+    assert "write_file" in summary.allowed_tools
+    assert "profiles" in summary.allowed_tools
+    assert "github" in summary.allowed_tools
+    assert "fetch_url" in summary.allowed_tools
+    assert "git status" not in summary.allowed_tools
+    assert "pytest" not in summary.allowed_tools
