@@ -78,6 +78,8 @@ Structured JSON scanning recognizes common tool-call shapes:
 
 Plain text transcripts are scanned with conservative patterns such as `to=tool_name`, `recipient_name`, and `<tool>tool_name</tool>`.
 
+When session records do not include agent metadata, files under `~/.openclaw/agents/<agentId>/sessions` are attributed to `<agentId>`. Explicit event-level agent metadata takes precedence over path inference.
+
 ## Output
 
 Terminal output includes:

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3 - 2026-04-20
+
+- Improved observed-tool agent attribution for documented OpenClaw session paths.
+- Observations loaded from `~/.openclaw/agents/<agentId>/sessions/*.jsonl` now default to `<agentId>` when event-level agent metadata is absent.
+- Text transcript parsing uses the same path-derived agent fallback.
+- Explicit event-level agent metadata still overrides path inference.
+
 ## 0.1.2 - 2026-04-20
 
 - Added default transcript discovery for `~/.openclaw/agents/<agentId>/sessions`, the documented OpenClaw session location.

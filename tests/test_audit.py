@@ -226,3 +226,55 @@ def test_sanitized_openclaw_session_jsonl_counts_embedded_tool_calls(tmp_path: P
     assert summary.observed_counts["functions.exec_command"] == 1
     assert report.jobs[0].name == "nightly-audit"
     assert report.jobs[0].observed_counts["read"] == 1
+
+
+def test_observations_infer_agent_from_documented_session_path(tmp_path: Path) -> None:
+    config_dir = tmp_path / "configs"
+    session_dir = tmp_path / ".openclaw" / "agents" / "main" / "sessions"
+    write(
+        config_dir / "main.json",
+        json.dumps({"name": "main", "allowed_tools": ["read", "exec", "web_fetch"]}),
+    )
+    write(
+        session_dir / "session-a.jsonl",
+        "\n".join(
+            [
+                json.dumps({"type": "tool", "tool": {"name": "read"}}),
+                json.dumps({"type": "tool_call", "name": "exec"}),
+                json.dumps(
+                    {
+                        "agent": "worker",
+                        "type": "tool_call",
+                        "name": "web_fetch",
+                    }
+                ),
+            ]
+        ),
+    )
+
+    report = run_audit(AuditOptions((config_dir,), (session_dir,)))
+    by_agent = {summary.name: summary for summary in report.agents}
+
+    assert by_agent["main"].observed_counts["read"] == 1
+    assert by_agent["main"].observed_counts["exec"] == 1
+    assert by_agent["worker"].observed_counts["web_fetch"] == 1
+    assert "unknown" not in by_agent
+
+
+def test_text_transcripts_infer_agent_from_documented_session_path(tmp_path: Path) -> None:
+    config_dir = tmp_path / "configs"
+    session_dir = tmp_path / ".openclaw" / "agents" / "worker" / "sessions"
+    write(
+        config_dir / "worker.json",
+        json.dumps({"name": "worker", "allowed_tools": ["functions.exec_command"]}),
+    )
+    write(
+        session_dir / "session-b.log",
+        'assistant to=functions.exec_command {"command": "pwd"}',
+    )
+
+    report = run_audit(AuditOptions((config_dir,), (session_dir,)))
+    by_agent = {summary.name: summary for summary in report.agents}
+
+    assert by_agent["worker"].observed_counts["functions.exec_command"] == 1
+    assert "unknown" not in by_agent

@@ -261,7 +261,7 @@ def _observations_from_file(path: Path) -> list[ToolObservation]:
 
 
 def _observations_from_data(data: Any, path: Path) -> Iterator[ToolObservation]:
-    default_agent = _find_agent_name(data) or "unknown"
+    default_agent = _find_agent_name(data) or _agent_name_from_session_path(path) or "unknown"
     default_job = _find_job_name(data)
     for event in _walk_mappings(data):
         for tool in _tool_names_from_event(event):
@@ -274,10 +274,11 @@ def _observations_from_data(data: Any, path: Path) -> Iterator[ToolObservation]:
 
 
 def _observations_from_text(text: str, path: Path) -> Iterator[ToolObservation]:
+    agent = _agent_name_from_session_path(path) or "unknown"
     for pattern in TOOL_TEXT_PATTERNS:
         for match in pattern.finditer(text):
             yield ToolObservation(
-                agent="unknown",
+                agent=agent,
                 tool=_normalize_tool(match.group(1)),
                 source=path,
             )
@@ -420,6 +421,20 @@ def _find_job_name(data: Any) -> str | None:
 
 def _first_job_string(data: Mapping[str, Any]) -> str | None:
     return _first_string(data, ["cron_job", "job", "job_name", "schedule_name"])
+
+
+def _agent_name_from_session_path(path: Path) -> str | None:
+    parts = path.parts
+    for index, part in enumerate(parts):
+        if part != "agents":
+            continue
+        if index + 2 >= len(parts):
+            continue
+        if parts[index + 2] == "sessions":
+            agent = parts[index + 1]
+            if agent:
+                return agent
+    return None
 
 
 def _walk_items(data: Any) -> Iterator[tuple[str, Any]]:
