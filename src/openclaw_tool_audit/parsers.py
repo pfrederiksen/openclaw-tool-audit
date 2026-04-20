@@ -264,15 +264,13 @@ def _observations_from_data(data: Any, path: Path) -> Iterator[ToolObservation]:
     default_agent = _find_agent_name(data) or "unknown"
     default_job = _find_job_name(data)
     for event in _walk_mappings(data):
-        tool = _tool_name_from_event(event)
-        if tool is None:
-            continue
-        yield ToolObservation(
-            agent=_find_agent_name(event) or default_agent,
-            tool=_normalize_tool(tool),
-            source=path,
-            job=_find_job_name(event) or default_job,
-        )
+        for tool in _tool_names_from_event(event):
+            yield ToolObservation(
+                agent=_find_agent_name(event) or default_agent,
+                tool=_normalize_tool(tool),
+                source=path,
+                job=_find_job_name(event) or default_job,
+            )
 
 
 def _observations_from_text(text: str, path: Path) -> Iterator[ToolObservation]:
@@ -285,53 +283,138 @@ def _observations_from_text(text: str, path: Path) -> Iterator[ToolObservation]:
             )
 
 
-def _tool_name_from_event(event: Mapping[str, Any]) -> str | None:
+def _tool_names_from_event(event: Mapping[str, Any]) -> list[str]:
+    tools: list[str] = []
     event_type = str(event.get("type", "")).lower()
-    if event_type in {"tool_call", "tool_use", "function_call"}:
-        direct = _first_string(event, ["tool", "tool_name", "name", "recipient_name"])
+    if _looks_like_tool_invocation(event_type):
+        direct = _first_string(event, _tool_name_keys())
         if direct:
-            return direct
+            tools.append(direct)
     if "recipient_name" in event and isinstance(event["recipient_name"], str):
-        return event["recipient_name"]
+        tools.append(event["recipient_name"])
+    if "recipientName" in event and isinstance(event["recipientName"], str):
+        tools.append(event["recipientName"])
     if "tool" in event and isinstance(event["tool"], str):
-        return event["tool"]
+        tools.append(event["tool"])
     if "tool_name" in event and isinstance(event["tool_name"], str):
-        return event["tool_name"]
+        tools.append(event["tool_name"])
+    if "toolName" in event and isinstance(event["toolName"], str):
+        tools.append(event["toolName"])
+    if "function_name" in event and isinstance(event["function_name"], str):
+        tools.append(event["function_name"])
+    if "functionName" in event and isinstance(event["functionName"], str):
+        tools.append(event["functionName"])
     function = event.get("function")
     if isinstance(function, Mapping):
-        return _first_string(function, ["name"])
+        function_name = _first_string(function, ["name"])
+        if function_name:
+            tools.append(function_name)
     if "function_call" in event and isinstance(event["function_call"], Mapping):
-        return _first_string(event["function_call"], ["name"])
-    return None
+        function_name = _first_string(event["function_call"], ["name"])
+        if function_name:
+            tools.append(function_name)
+    if "functionCall" in event and isinstance(event["functionCall"], Mapping):
+        function_name = _first_string(event["functionCall"], ["name"])
+        if function_name:
+            tools.append(function_name)
+
+    for text in _event_text_fragments(event):
+        tools.extend(_tool_names_from_text(text))
+    return _dedupe_tools(tools)
+
+
+def _looks_like_tool_invocation(event_type: str) -> bool:
+    if event_type in {
+        "tool_call",
+        "tool-use",
+        "tool_use",
+        "tool_invocation",
+        "tool-invocation",
+        "function_call",
+        "input_tool_call",
+        "assistant_tool_call",
+    }:
+        return True
+    return "tool" in event_type and any(token in event_type for token in ("call", "use", "invoke"))
+
+
+def _tool_name_keys() -> list[str]:
+    return [
+        "tool",
+        "tool_name",
+        "toolName",
+        "name",
+        "recipient_name",
+        "recipientName",
+        "function_name",
+        "functionName",
+    ]
+
+
+def _event_text_fragments(event: Mapping[str, Any]) -> Iterator[str]:
+    for key in ("content", "text", "raw", "transcript"):
+        value = event.get(key)
+        if isinstance(value, str):
+            yield value
+        elif isinstance(value, list | tuple):
+            for item in value:
+                if isinstance(item, str):
+                    yield item
+
+
+def _tool_names_from_text(text: str) -> list[str]:
+    tools: list[str] = []
+    for pattern in TOOL_TEXT_PATTERNS:
+        tools.extend(match.group(1) for match in pattern.finditer(text))
+    return _dedupe_tools(tools)
+
+
+def _dedupe_tools(tools: Iterable[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for tool in tools:
+        normalized = _normalize_tool(tool)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        deduped.append(normalized)
+    return deduped
 
 
 def _find_agent_name(data: Any) -> str | None:
     if not isinstance(data, Mapping):
         return None
-    metadata = data.get("metadata")
-    candidates = [
-        _first_string(data, ["agent", "agent_name", "agent_id"]),
-        _first_string(metadata, ["agent", "agent_name", "agent_id"])
-        if isinstance(metadata, Mapping)
-        else None,
-    ]
-    openclaw = data.get("openclaw")
-    if isinstance(openclaw, Mapping):
-        candidates.append(_first_string(openclaw, ["agent", "agent_name", "agent_id", "name"]))
+    candidates = [_first_agent_string(data)]
+    for container_key in ("metadata", "session", "run", "openclaw", "message"):
+        container = data.get(container_key)
+        if isinstance(container, Mapping):
+            candidates.append(_first_agent_string(container))
     return next((candidate for candidate in candidates if candidate), None)
+
+
+def _first_agent_string(data: Mapping[str, Any]) -> str | None:
+    direct = _first_string(data, ["agent", "agent_name", "agent_id"])
+    if direct:
+        return direct
+    agent = data.get("agent")
+    if isinstance(agent, Mapping):
+        return _first_string(agent, ["name", "id", "agent_name", "agent_id"])
+    return None
 
 
 def _find_job_name(data: Any) -> str | None:
     if not isinstance(data, Mapping):
         return None
-    metadata = data.get("metadata")
-    candidates = [
-        _first_string(data, ["cron_job", "job", "job_name", "schedule_name"]),
-        _first_string(metadata, ["cron_job", "job", "job_name", "schedule_name"])
-        if isinstance(metadata, Mapping)
-        else None,
-    ]
+    candidates = [_first_job_string(data)]
+    for container_key in ("metadata", "session", "run", "openclaw", "message"):
+        container = data.get(container_key)
+        if isinstance(container, Mapping):
+            candidates.append(_first_job_string(container))
     return next((candidate for candidate in candidates if candidate), None)
+
+
+def _first_job_string(data: Mapping[str, Any]) -> str | None:
+    return _first_string(data, ["cron_job", "job", "job_name", "schedule_name"])
 
 
 def _walk_items(data: Any) -> Iterator[tuple[str, Any]]:

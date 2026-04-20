@@ -1,0 +1,3 @@
+{"session":{"agent":{"name":"main"},"job":"nightly-audit"},"message":{"role":"assistant","content":[{"type":"input_tool_call","name":"read","arguments":{"path":"README.md"}},{"type":"tool_use","toolName":"edit","input":{"path":"README.md"}}]}}
+{"metadata":{"agent":"main","job":"nightly-audit"},"message":{"role":"assistant","tool_calls":[{"type":"function","function":{"name":"exec"}},{"id":"call_web","functionCall":{"name":"web_fetch"}}]}}
+{"agent":"main","event":{"type":"assistant_message","content":"Calling tool to=web_fetch and then {\"recipient_name\":\"functions.exec_command\"}."}}

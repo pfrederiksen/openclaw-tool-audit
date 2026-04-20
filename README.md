@@ -64,9 +64,14 @@ Structured JSON scanning recognizes common tool-call shapes:
 
 - `{"type": "tool_call", "name": "read_file"}`
 - `{"type": "tool_use", "tool": "web"}`
+- `{"type": "input_tool_call", "name": "read"}`
+- `{"type": "tool_use", "toolName": "edit"}`
 - `{"recipient_name": "functions.exec_command"}`
 - `{"function": {"name": "fetch_url"}}`
 - `{"function_call": {"name": "summarize"}}`
+- `{"functionCall": {"name": "web_fetch"}}`
+- `{"message": {"tool_calls": [{"function": {"name": "exec"}}]}}`
+- `{"message": {"content": [{"type": "input_tool_call", "name": "read"}]}}`
 
 Plain text transcripts are scanned with conservative patterns such as `to=tool_name`, `recipient_name`, and `<tool>tool_name</tool>`.
 

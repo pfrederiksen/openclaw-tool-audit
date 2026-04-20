@@ -129,3 +129,89 @@ def test_nested_tool_config_values_do_not_crash(tmp_path: Path) -> None:
     assert "fetch_url" in summary.allowed_tools
     assert "git status" not in summary.allowed_tools
     assert "pytest" not in summary.allowed_tools
+
+
+def test_sanitized_openclaw_session_jsonl_counts_embedded_tool_calls(tmp_path: Path) -> None:
+    config_dir = tmp_path / "agents"
+    sessions_dir = tmp_path / "sessions"
+    write(
+        config_dir / "main.json",
+        json.dumps(
+            {
+                "name": "main",
+                "allowed_tools": [
+                    "read",
+                    "edit",
+                    "exec",
+                    "web_fetch",
+                    "functions.exec_command",
+                ],
+            }
+        ),
+    )
+    write(
+        sessions_dir / "sanitized-openclaw-session.jsonl",
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "session": {
+                            "agent": {"name": "main"},
+                            "job": "nightly-audit",
+                        },
+                        "message": {
+                            "role": "assistant",
+                            "content": [
+                                {
+                                    "type": "input_tool_call",
+                                    "name": "read",
+                                    "arguments": {"path": "README.md"},
+                                },
+                                {
+                                    "type": "tool_use",
+                                    "toolName": "edit",
+                                    "input": {"path": "README.md"},
+                                },
+                            ],
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "metadata": {"agent": "main", "job": "nightly-audit"},
+                        "message": {
+                            "role": "assistant",
+                            "tool_calls": [
+                                {"type": "function", "function": {"name": "exec"}},
+                                {"id": "call_web", "functionCall": {"name": "web_fetch"}},
+                            ],
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "agent": "main",
+                        "event": {
+                            "type": "assistant_message",
+                            "content": (
+                                "Calling tool to=web_fetch and then "
+                                '{"recipient_name":"functions.exec_command"}.'
+                            ),
+                        },
+                    }
+                ),
+            ]
+        ),
+    )
+
+    report = run_audit(AuditOptions((config_dir,), (sessions_dir,)))
+    summary = report.agents[0]
+
+    assert report.observation_count == 6
+    assert summary.observed_counts["read"] == 1
+    assert summary.observed_counts["edit"] == 1
+    assert summary.observed_counts["exec"] == 1
+    assert summary.observed_counts["web_fetch"] == 2
+    assert summary.observed_counts["functions.exec_command"] == 1
+    assert report.jobs[0].name == "nightly-audit"
+    assert report.jobs[0].observed_counts["read"] == 1
