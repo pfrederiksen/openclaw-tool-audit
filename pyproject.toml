@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [
-  { name = "Peter Frederiksen" }
+  { name = "Paul Frederiksen" }
 ]
 keywords = ["openclaw", "security", "audit", "cli", "tools"]
 classifiers = [

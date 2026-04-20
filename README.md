@@ -118,8 +118,9 @@ The release workflow builds the package, publishes to PyPI, creates a GitHub rel
 
 Required repository secrets:
 
-- `PYPI_API_TOKEN`, unless PyPI Trusted Publishing is configured for this repository.
 - `HOMEBREW_TAP_TOKEN`, a GitHub token that can push to `pfrederiksen/homebrew-tap`.
+
+For PyPI, either configure Trusted Publishing for this repository or set `PYPI_API_TOKEN` as a repository secret.
 
 Do not commit PyPI tokens to the repository.
 
