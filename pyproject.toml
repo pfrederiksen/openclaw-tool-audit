@@ -39,6 +39,7 @@ dev = ["build>=1.2", "pytest>=8", "ruff>=0.6"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/openclaw_tool_audit"]
+include = ["src/openclaw_tool_audit/py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

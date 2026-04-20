@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from . import __version__
 from .audit import AuditOptions, run_audit
 from .output import render_json, render_markdown, render_text
 
@@ -58,6 +59,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Session/transcript file or directory. May be repeated.",
     )
     parser.add_argument("--agent", help="Only show one agent.")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
     parser.add_argument(
         "--last",
         help="Accepted for workflow compatibility. Timestamp filtering is not applied yet.",

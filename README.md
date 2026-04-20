@@ -6,6 +6,7 @@
 
 ```bash
 pipx install openclaw-tool-audit
+brew install pfrederiksen/tap/openclaw-tool-audit
 ```
 
 From a checkout:
@@ -23,6 +24,7 @@ openclaw-tool-audit --agent main --last 14d
 openclaw-tool-audit --json
 openclaw-tool-audit --markdown --broadest-first
 openclaw-tool-audit --config fixtures/agents --sessions fixtures/sessions --top-tools 5
+openclaw-tool-audit --version
 ```
 
 By default the CLI checks these config locations:
