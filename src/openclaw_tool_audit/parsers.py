@@ -380,11 +380,17 @@ def _dedupe_tools(tools: Iterable[str]) -> list[str]:
     deduped: list[str] = []
     for tool in tools:
         normalized = _normalize_tool(tool)
-        if not normalized or normalized in seen:
+        if not _looks_like_tool_name(normalized) or normalized in seen:
             continue
         seen.add(normalized)
         deduped.append(normalized)
     return deduped
+
+
+def _looks_like_tool_name(tool: str) -> bool:
+    if not tool:
+        return False
+    return not re.fullmatch(r"-?\d+(?:\.\d+)?", tool)
 
 
 def _find_agent_name(data: Any) -> str | None:

@@ -278,3 +278,34 @@ def test_text_transcripts_infer_agent_from_documented_session_path(tmp_path: Pat
 
     assert by_agent["worker"].observed_counts["functions.exec_command"] == 1
     assert "unknown" not in by_agent
+
+
+def test_numeric_name_fragments_are_not_counted_as_tools(tmp_path: Path) -> None:
+    config_dir = tmp_path / "configs"
+    session_dir = tmp_path / ".openclaw" / "agents" / "main" / "sessions"
+    write(
+        config_dir / "main.json",
+        json.dumps({"name": "main", "allowed_tools": ["exec"]}),
+    )
+    write(
+        session_dir / "session-c.jsonl",
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "agent": "main",
+                        "type": "assistant",
+                        "content": '{"name":"-1003710118964","arguments":{"chat_id":"redacted"}}',
+                    }
+                ),
+                json.dumps({"type": "tool_call", "name": "exec"}),
+            ]
+        ),
+    )
+
+    report = run_audit(AuditOptions((config_dir,), (session_dir,)))
+    summary = report.agents[0]
+
+    assert report.observation_count == 1
+    assert summary.observed_counts["exec"] == 1
+    assert "-1003710118964" not in summary.observed_tools

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4 - 2026-04-20
+
+- Filter bare numeric `name` fragments from observed tool extraction to avoid counting IDs such as negative chat/channel identifiers as tool names.
+- Added regression coverage for numeric false positives in transcript text fragments.
+
 ## 0.1.3 - 2026-04-20
 
 - Improved observed-tool agent attribution for documented OpenClaw session paths.
