@@ -1,0 +1,9 @@
+{
+  "name": "main",
+  "allowed_tools": [
+    "read_file",
+    "write_file",
+    "shell",
+    "web"
+  ]
+}

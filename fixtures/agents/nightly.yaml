@@ -1,0 +1,7 @@
+name: nightly-reporter
+cron_job: nightly-summary
+allowed_tools:
+  - fetch_url
+  - summarize
+  - github
+  - filesystem

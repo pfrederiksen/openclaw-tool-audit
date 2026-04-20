@@ -1,0 +1,5 @@
+{"agent":"main","type":"tool_call","name":"read_file"}
+{"agent":"main","type":"tool_call","name":"read_file"}
+{"agent":"main","type":"tool_call","name":"shell"}
+{"agent":"nightly-reporter","job":"nightly-summary","type":"tool_call","name":"fetch_url"}
+{"agent":"nightly-reporter","job":"nightly-summary","type":"tool_call","name":"summarize"}
